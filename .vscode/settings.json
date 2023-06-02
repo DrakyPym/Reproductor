@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "portaudio.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "hideshow.h": "c",
+        "termios.h": "c",
+        "pthread.h": "c",
+        "sndfile.h": "c",
+        "stdbool.h": "c",
+        "controlsong.h": "c",
+        "tools.h": "c",
+        "stdint.h": "c",
+        "types.h": "c"
+    },
+    "cmake.configureOnOpen": false,
+    "cmake.sourceDirectory": "/home/draky/Escritorio/Reproductor/lib/portaudio"
+}

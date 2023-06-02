@@ -111,7 +111,8 @@ int main()
     }
     if (numFiles == 0)
         printf("\nNo hay archivos en el directorio\n");
-    else
+    else if (numFiles > 100)
+        printf("Supera el maximo de 100 canciones permitidas");
     {
         // Copia los nombres de los archivos a la estructura Songs
         for (int i = 0; i < numFiles; i++)

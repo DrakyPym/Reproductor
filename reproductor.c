@@ -38,7 +38,7 @@ typedef struct
     int numFiles; // Guardara el numero de archivos wav leidos por la funcion scanFolder
     char **fileNames;
     const char *directorio;
-} DatosHiloPlayer;
+} DataThreadPlayer;
 
 // Funcion del hilo para contar los segundos
 void *contarSegundos(void *arg)
@@ -76,7 +76,8 @@ int audioFloat32Callback(const void *inputBuffer, void *outputBuffer,
     float *out = (float *)outputBuffer;
 
     // Leer los datos del archivo de audio y los copiamos al bufer de salida
-    size_t bytesRead = fread(out, sizeof(float), framesPerBuffer * audioData->numChannels, audioData->file);
+    size_t bytesRead = fread(out, sizeof(float), framesPerBuffer * audioData->numChannels, 
+                             audioData->file);
 
     if (bytesRead < framesPerBuffer * audioData->numChannels)
     {
@@ -98,7 +99,8 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
     short *out = (short *)outputBuffer;
 
     // Leer los datos del archivo de audio
-    size_t bytesRead = fread(out, sizeof(short), framesPerBuffer * audioData->numChannels, audioData->file);
+    size_t bytesRead = fread(out, sizeof(short), framesPerBuffer * audioData->numChannels, 
+                             audioData->file);
 
     if (bytesRead < framesPerBuffer * audioData->numChannels)
     {
@@ -119,12 +121,14 @@ int main()
     // Song songs[MAX_FILES];
     // int bitsPerSample;
     pthread_t contador;
-    DatosHiloPlayer dataThread;
+    DataThreadPlayer dataThread;
     dataThread.songs->directorio = "audios/"; // Ruta del directorio a explorar
     // int numFiles;                       // Guardara el numero de archivos wav leidos por la funcion scanFolder
     // char **fileNames;
 
-    dataThread.fileNames = loadSongsFromDirectoty(dataThread.songs->directorio, &(dataThread.numFiles), MAX_FILES, LENGTH_FILES); // Retorna una matriz con los nombres de los archivos wav
+    dataThread.fileNames = loadSongsFromDirectoty(dataThread.songs->directorio,
+                                                  &(dataThread.numFiles), MAX_FILES,
+                                                  LENGTH_FILES); // Retorna una matriz con los nombres de los archivos wav
 
     if (dataThread.fileNames == NULL)
     {
@@ -151,7 +155,8 @@ int main()
         }
 
         // Selecciona la cancion y se reproduce
-        dataThread.audioData.file = printSongs(dataThread.fileNames, dataThread.numFiles, dataThread.songs->directorio);
+        dataThread.audioData.file = printSongs(dataThread.fileNames, dataThread.numFiles, 
+                                               dataThread.songs->directorio);
 
         // Leer la cabecera del archivo WAV
         char header[44];
@@ -184,7 +189,7 @@ int main()
             fseek(dataThread.audioData.file, 34, SEEK_SET);
             // Abrir el flujo de salida de audio
             dataThread.err = Pa_OpenStream(&(dataThread.stream), NULL, &(dataThread.outputParams), dataThread.audioData.sampleRate,
-                                FRAMES_PER_BUFFER, paNoFlag, audioFloat32Callback, &(dataThread.audioData));
+                                           FRAMES_PER_BUFFER, paNoFlag, audioFloat32Callback, &(dataThread.audioData));
         }
         else if (dataThread.bitsPerSample == 16)
         {
@@ -193,7 +198,7 @@ int main()
             fseek(dataThread.audioData.file, 44, SEEK_SET);
             // Abrir el flujo de salida de audio
             dataThread.err = Pa_OpenStream(&(dataThread.stream), NULL, &(dataThread.outputParams), dataThread.audioData.sampleRate,
-                                FRAMES_PER_BUFFER, paNoFlag, audioInt16Callback, &(dataThread.audioData));
+                                           FRAMES_PER_BUFFER, paNoFlag, audioInt16Callback, &(dataThread.audioData));
         }
         else
         {

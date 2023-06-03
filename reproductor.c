@@ -78,18 +78,22 @@ int main()
     // Crear el hilo contador de segundos reproducidos
     if (pthread_create(&tContador, NULL, contarSegundos, (void *)&(dataThread.audioData)) != 0)
     {
+        showCursor();
+        restoreInputBuffer();
         printf("\nError al crear el hilo contador");
         return 1;
     }
-    
-    //Esperar a que el hilo tPlayer finalice
+
+    // Esperar a que el hilo tPlayer finalice
     pthread_join(tPlayer, NULL);
     if (dataThread.error == true)
     {
+        showCursor();
+        restoreInputBuffer();
         printf("\nError en el hilo tPlayer\n");
         exit(1);
     }
-    //Esperar a que el hilo tContador finalice
+    // Esperar a que el hilo tContador finalice
     pthread_join(tContador, NULL);
 
     showCursor();
@@ -167,7 +171,7 @@ void *player(void *arg)
     // Retorna una matriz con los nombres de los archivos wav
     dataThread->fileNames = loadSongsFromDirectoty(dataThread->songs->directorio,
                                                    &(dataThread->numFiles), MAX_FILES,
-                                                   LENGTH_FILES, &(dataThread->error)); 
+                                                   LENGTH_FILES, &(dataThread->error));
     if (dataThread->fileNames == NULL)
     {
         dataThread->error = true;

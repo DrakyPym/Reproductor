@@ -25,6 +25,6 @@ typedef struct
     float currentTime;
 } AudioData;
 
-void stopPlayNextBack(AudioData *data, PaStream *stream);
+void stopPlayNextBackTime(AudioData *data, PaStream *stream);
 FILE* printSongs(char **fileNames, int numFiles, const char *directorio);
 #endif

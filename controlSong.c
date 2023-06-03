@@ -1,6 +1,6 @@
 #include "controlSong.h"
 
-void stopPlayNextBack(AudioData *data, PaStream *stream)
+void stopPlayNextBackTime(AudioData *data, PaStream *stream)
 {
     int quit = 0;
     printf("Reproduciendo audio. Presiona 'p' para pausar o 'q' para salir.\n");

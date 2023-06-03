@@ -118,7 +118,7 @@ int main()
     dataThread.songs->directorio = "audios/"; // Ruta del directorio a explorar
     dataThread.error = false;
 
-    // Crear el hilo contador de segundos reproducidos
+    // Crear el hilo player
     if (pthread_create(&tPlayer, NULL, player, (void *)&dataThread) != 0)
     {
         printf("\nError al crear el hilo player");
@@ -233,8 +233,8 @@ int main()
             return 1;
         }
 
-        // Funcion que controla la pausa, el stop, la cancion siguiente y la anterior
-        stopPlayNextBack(&(dataThread.audioData), dataThread.stream);
+        // Funcion que controla la pausa, el stop, la cancion siguiente y la anterior, tambien imprime los segundos reproducidos
+        stopPlayNextBackTime(&(dataThread.audioData), dataThread.stream);
 
         // Detener la reproducción
         dataThread.err = Pa_StopStream(dataThread.stream);

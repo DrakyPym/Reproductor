@@ -46,6 +46,63 @@ int audioFloat32Callback(const void *inputBuffer, void *outputBuffer,
                          unsigned long framesPerBuffer,
                          const PaStreamCallbackTimeInfo *timeInfo,
                          PaStreamCallbackFlags statusFlags,
+                         void *userData);
+
+// Función de callback para el procesamiento de audio entero de 16 bits
+int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
+                       unsigned long framesPerBuffer,
+                       const PaStreamCallbackTimeInfo *timeInfo,
+                       PaStreamCallbackFlags statusFlags,
+                       void *userData);
+
+// Funcion del hilo para contar los segundos
+void *contarSegundos(void *arg);
+
+// Funcion del hilo para contar los segundos
+void *player(void *arg);
+
+int main()
+{
+    pthread_t tContador, tPlayer;
+    DataThreadPlayer dataThread;
+    dataThread.songs->directorio = "audios/"; // Ruta del directorio a explorar
+    dataThread.error = false;
+
+    // Crear el hilo player
+    if (pthread_create(&tPlayer, NULL, player, (void *)&dataThread) != 0)
+    {
+        printf("\nError al crear el hilo player");
+        return 1;
+    }
+
+    // Crear el hilo contador de segundos reproducidos
+    if (pthread_create(&tContador, NULL, contarSegundos, (void *)&(dataThread.audioData)) != 0)
+    {
+        printf("\nError al crear el hilo contador");
+        return 1;
+    }
+    
+    //Esperar a que el hilo tPlayer finalice
+    pthread_join(tPlayer, NULL);
+    if (dataThread.error == true)
+    {
+        printf("\nError en el hilo tPlayer\n");
+        exit(1);
+    }
+    //Esperar a que el hilo tContador finalice
+    pthread_join(tContador, NULL);
+
+    showCursor();
+    restoreInputBuffer();
+    freeFileNames(dataThread.fileNames, dataThread.numFiles);
+
+    return 0;
+}
+
+int audioFloat32Callback(const void *inputBuffer, void *outputBuffer,
+                         unsigned long framesPerBuffer,
+                         const PaStreamCallbackTimeInfo *timeInfo,
+                         PaStreamCallbackFlags statusFlags,
                          void *userData)
 {
     AudioData *audioData = (AudioData *)userData;
@@ -87,7 +144,6 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
     return paContinue;
 }
 
-// Funcion del hilo para contar los segundos
 void *contarSegundos(void *arg)
 {
     AudioData *datos = (AudioData *)arg;
@@ -104,14 +160,14 @@ void *contarSegundos(void *arg)
     }
 }
 
-// Funcion del hilo para contar los segundos
 void *player(void *arg)
 {
     DataThreadPlayer *dataThread = (DataThreadPlayer *)arg;
 
+    // Retorna una matriz con los nombres de los archivos wav
     dataThread->fileNames = loadSongsFromDirectoty(dataThread->songs->directorio,
                                                    &(dataThread->numFiles), MAX_FILES,
-                                                   LENGTH_FILES, &(dataThread->error)); // Retorna una matriz con los nombres de los archivos wav
+                                                   LENGTH_FILES, &(dataThread->error)); 
     if (dataThread->fileNames == NULL)
     {
         dataThread->error = true;
@@ -238,42 +294,4 @@ void *player(void *arg)
         position(5, 10);
         printf("Reproducción detenida.\n");
     }
-}
-
-int main()
-{
-    pthread_t tContador, tPlayer;
-    DataThreadPlayer dataThread;
-    dataThread.songs->directorio = "audios/"; // Ruta del directorio a explorar
-    dataThread.error = false;
-
-    // Crear el hilo player
-    if (pthread_create(&tPlayer, NULL, player, (void *)&dataThread) != 0)
-    {
-        printf("\nError al crear el hilo player");
-        return 1;
-    }
-
-    // Crear el hilo contador de segundos reproducidos
-    if (pthread_create(&tContador, NULL, contarSegundos, (void *)&(dataThread.audioData)) != 0)
-    {
-        printf("\nError al crear el hilo contador");
-        return 1;
-    }
-    
-    //Esperar a que el hilo tPlayer finalice
-    pthread_join(tPlayer, NULL);
-    if (dataThread.error == true)
-    {
-        printf("\nError en el hilo tPlayer\n");
-        exit(1);
-    }
-    //Esperar a que el hilo tContador finalice
-    pthread_join(tContador, NULL);
-
-    showCursor();
-    restoreInputBuffer();
-    freeFileNames(dataThread.fileNames, dataThread.numFiles);
-
-    return 0;
 }

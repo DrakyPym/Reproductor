@@ -8,7 +8,6 @@
 #include "controlSong.h"
 
 #define FRAMES_PER_BUFFER 64
-// #define FILE_NAME "./audios/audio2-16bits.wav"
 #define MAX_FILES 99    // Maxima cantidad de archivos wav que leera scanFolder
 #define LENGTH_FILES 50 // Tamanio maximo en el nombre de los archivos wav
 
@@ -26,6 +25,7 @@ typedef struct
     const char *directorio;
 } Song;
 
+// Estructura para almacenar los datos que recibira el hilo player
 typedef struct
 {
     PaStream *stream;
@@ -38,6 +38,7 @@ typedef struct
     int numFiles; // Guardara el numero de archivos wav leidos por la funcion scanFolder
     char **fileNames;
     const char *directorio;
+    bool error;
 } DataThreadPlayer;
 
 // Funcion del hilo para contar los segundos
@@ -55,14 +56,13 @@ void *contarSegundos(void *arg)
             datos->currentTime += 0.01; // Incrementar los segundos
         }
     }
-    pthread_exit(NULL);
 }
 
 // Funcion del hilo para contar los segundos
 void *player(void *arg)
 {
+    DataThreadPlayer *dataThread = (DataThreadPlayer *)arg;
 
-    pthread_exit(NULL);
 }
 
 // Función de callback para el procesamiento de audio de punto flotante de 32 bits
@@ -76,7 +76,7 @@ int audioFloat32Callback(const void *inputBuffer, void *outputBuffer,
     float *out = (float *)outputBuffer;
 
     // Leer los datos del archivo de audio y los copiamos al bufer de salida
-    size_t bytesRead = fread(out, sizeof(float), framesPerBuffer * audioData->numChannels, 
+    size_t bytesRead = fread(out, sizeof(float), framesPerBuffer * audioData->numChannels,
                              audioData->file);
 
     if (bytesRead < framesPerBuffer * audioData->numChannels)
@@ -99,7 +99,7 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
     short *out = (short *)outputBuffer;
 
     // Leer los datos del archivo de audio
-    size_t bytesRead = fread(out, sizeof(short), framesPerBuffer * audioData->numChannels, 
+    size_t bytesRead = fread(out, sizeof(short), framesPerBuffer * audioData->numChannels,
                              audioData->file);
 
     if (bytesRead < framesPerBuffer * audioData->numChannels)
@@ -113,18 +113,17 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
 
 int main()
 {
-    // PaStream *stream;
-    // PaError err;
-    // AudioData audioData;            // Estructura que guarda los datos de los audios, cabezera y variables de control
-    // const PaDeviceInfo *deviceInfo; // Estructura para pasar la latencia
-    // PaStreamParameters outputParams;
-    // Song songs[MAX_FILES];
-    // int bitsPerSample;
-    pthread_t contador;
+    pthread_t tContador, tPlayer;
     DataThreadPlayer dataThread;
     dataThread.songs->directorio = "audios/"; // Ruta del directorio a explorar
-    // int numFiles;                       // Guardara el numero de archivos wav leidos por la funcion scanFolder
-    // char **fileNames;
+    dataThread.error = false;
+
+    // Crear el hilo contador de segundos reproducidos
+    if (pthread_create(&tPlayer, NULL, player, (void *)&dataThread) != 0)
+    {
+        printf("\nError al crear el hilo player");
+        return 1;
+    }
 
     dataThread.fileNames = loadSongsFromDirectoty(dataThread.songs->directorio,
                                                   &(dataThread.numFiles), MAX_FILES,
@@ -155,7 +154,7 @@ int main()
         }
 
         // Selecciona la cancion y se reproduce
-        dataThread.audioData.file = printSongs(dataThread.fileNames, dataThread.numFiles, 
+        dataThread.audioData.file = printSongs(dataThread.fileNames, dataThread.numFiles,
                                                dataThread.songs->directorio);
 
         // Leer la cabecera del archivo WAV
@@ -228,9 +227,9 @@ int main()
         dataThread.audioData.currentTime = 0;
 
         // Crear el hilo contador de segundos reproducidos
-        if (pthread_create(&contador, NULL, contarSegundos, (void *)&(dataThread.audioData)) != 0)
+        if (pthread_create(&tContador, NULL, contarSegundos, (void *)&(dataThread.audioData)) != 0)
         {
-            fprintf(stderr, "Error al crear el hilo\n");
+            printf("\nError al crear el hilo contador");
             return 1;
         }
 
@@ -241,7 +240,7 @@ int main()
         dataThread.err = Pa_StopStream(dataThread.stream);
         if (dataThread.err != paNoError)
         {
-            // printf("Error al detener la reproducción: %s\n", Pa_GetErrorText(err));
+            return 1;
         }
 
         // Cerrar el flujo de audio
@@ -258,7 +257,8 @@ int main()
         fclose(dataThread.audioData.file);
         position(5, 10);
         printf("Reproducción detenida.\n");
-        pthread_join(contador, NULL);
+        pthread_join(tContador, NULL);
+        pthread_join(tPlayer, NULL);
         showCursor();
         restoreInputBuffer();
     }

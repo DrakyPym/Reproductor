@@ -7,7 +7,7 @@
 #include "tools.h"
 #include "controlSong.h"
 
-#define FRAMES_PER_BUFFER 64
+#define FRAMES_PER_BUFFER 64 // Tamanio del buffer
 #define MAX_FILES 99    // Maxima cantidad de archivos wav que leera scanFolder
 #define LENGTH_FILES 50 // Tamanio maximo en el nombre de los archivos wav
 

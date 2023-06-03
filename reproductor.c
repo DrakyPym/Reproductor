@@ -23,8 +23,22 @@ typedef struct
     char album[15];
     char genre[15];
     char fileName[LENGTH_FILES];
-    const char *directorio; 
+    const char *directorio;
 } Song;
+
+typedef struct
+{
+    PaStream *stream;
+    PaError err;
+    AudioData audioData;            // Estructura que guarda los datos de los audios, cabezera y variables de control
+    const PaDeviceInfo *deviceInfo; // Estructura para pasar la latencia
+    PaStreamParameters outputParams;
+    Song songs[MAX_FILES];
+    int bitsPerSample;
+    int numFiles; // Guardara el numero de archivos wav leidos por la funcion scanFolder
+    char **fileNames;
+    const char *directorio;
+} DatosHiloPlayer;
 
 // Funcion del hilo para contar los segundos
 void *contarSegundos(void *arg)
@@ -47,7 +61,7 @@ void *contarSegundos(void *arg)
 // Funcion del hilo para contar los segundos
 void *player(void *arg)
 {
-    
+
     pthread_exit(NULL);
 }
 
@@ -97,153 +111,153 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
 
 int main()
 {
-    PaStream *stream;
-    PaError err;
-    AudioData audioData;            // Estructura que guarda los datos de los audios, cabezera y variables de control
-    const PaDeviceInfo *deviceInfo; // Estructura para pasar la latencia
-    PaStreamParameters outputParams;
-    Song songs[MAX_FILES];
+    // PaStream *stream;
+    // PaError err;
+    // AudioData audioData;            // Estructura que guarda los datos de los audios, cabezera y variables de control
+    // const PaDeviceInfo *deviceInfo; // Estructura para pasar la latencia
+    // PaStreamParameters outputParams;
+    // Song songs[MAX_FILES];
+    // int bitsPerSample;
     pthread_t contador;
-    int bitsPerSample;
-    songs->directorio = "audios/"; // Ruta del directorio a explorar
-    
-    int numFiles;                       // Guardara el numero de archivos wav leidos por la funcion scanFolder
-    char **fileNames;
+    DatosHiloPlayer datos;
+    datos.songs->directorio = "audios/"; // Ruta del directorio a explorar
+    // int numFiles;                       // Guardara el numero de archivos wav leidos por la funcion scanFolder
+    // char **fileNames;
 
-    fileNames = loadSongsFromDirectoty(songs->directorio, &numFiles, MAX_FILES, LENGTH_FILES); // Retorna una matriz con los nombres de los archivos wav
+    datos.fileNames = loadSongsFromDirectoty(datos.songs->directorio, &(datos.numFiles), MAX_FILES, LENGTH_FILES); // Retorna una matriz con los nombres de los archivos wav
 
-    if (fileNames == NULL)
+    if (datos.fileNames == NULL)
     {
         return 1;
     }
-    if (numFiles == 0)
-        printf("\nNo hay archivos en el directorio\n");
-    else if (numFiles > 100)
+    if (datos.numFiles == 0)
+        printf("\nNo hay archivos wav en el directorio\n");
+    else if (datos.numFiles > 100)
         printf("Supera el maximo de 100 canciones permitidas");
     {
         // Copia los nombres de los archivos a la estructura Songs
-        for (int i = 0; i < numFiles; i++)
+        for (int i = 0; i < datos.numFiles; i++)
         {
-            strcpy(songs[i].fileName, fileNames[i]);
+            strcpy(datos.songs[i].fileName, datos.fileNames[i]);
         }
 
         // Inicializar la biblioteca PortAudio
-        err = Pa_Initialize();
+        datos.err = Pa_Initialize();
         system("clear");
-        if (err != paNoError)
+        if (datos.err != paNoError)
         {
-            printf("Error al inicializar PortAudio: %s\n", Pa_GetErrorText(err));
+            printf("Error al inicializar PortAudio: %s\n", Pa_GetErrorText(datos.err));
             return 1;
         }
 
         // Selecciona la cancion y se reproduce
-        audioData.file = printSongs(fileNames, numFiles, songs->directorio);
+        datos.audioData.file = printSongs(datos.fileNames, datos.numFiles, datos.songs->directorio);
 
         // Leer la cabecera del archivo WAV
         char header[44];
-        fread(header, sizeof(char), 44, audioData.file);
+        fread(header, sizeof(char), 44, datos.audioData.file);
 
         // Obtener el numero de canales
-        fseek(audioData.file, 22, SEEK_SET);
-        fread(&audioData.numChannels, sizeof(short), 1, audioData.file);
+        fseek(datos.audioData.file, 22, SEEK_SET);
+        fread(&(datos.audioData).numChannels, sizeof(short), 1, datos.audioData.file);
 
         // Obtener la velocidad de muestreo del archivo de audio
-        fseek(audioData.file, 24, SEEK_SET);
-        fread(&audioData.sampleRate, sizeof(int), 1, audioData.file);
+        fseek(datos.audioData.file, 24, SEEK_SET);
+        fread(&(datos.audioData.sampleRate), sizeof(int), 1, datos.audioData.file);
 
         // Obtener información del dispositivo de salida
-        outputParams.device = Pa_GetDefaultOutputDevice(); // Obtenemos el identificador del dispositivo de salida por defecto
-        deviceInfo = Pa_GetDeviceInfo(outputParams.device);
-        outputParams.channelCount = audioData.numChannels;                   // Establecemos el numero de canales
-        outputParams.suggestedLatency = deviceInfo->defaultLowOutputLatency; // Se establece la latencia
-        outputParams.hostApiSpecificStreamInfo = NULL;
+        datos.outputParams.device = Pa_GetDefaultOutputDevice(); // Obtenemos el identificador del dispositivo de salida por defecto
+        datos.deviceInfo = Pa_GetDeviceInfo(datos.outputParams.device);
+        datos.outputParams.channelCount = datos.audioData.numChannels;                   // Establecemos el numero de canales
+        datos.outputParams.suggestedLatency = datos.deviceInfo->defaultLowOutputLatency; // Se establece la latencia
+        datos.outputParams.hostApiSpecificStreamInfo = NULL;
 
         // Verificar el tamaño de muestra
-        bitsPerSample = header[34] + (header[35] << 8); // Obtener los bits por muestra desde la cabecera
+        datos.bitsPerSample = header[34] + (header[35] << 8); // Obtener los bits por muestra desde la cabecera
 
         // 1.Establece los parametros dependiendo de si es de punto flotante de 32 bits o entero de 16 bits
         // 2.Abre el flujo de audio
-        if (bitsPerSample == 32)
+        if (datos.bitsPerSample == 32)
         {
-            outputParams.sampleFormat = paFloat32; // Se establece el formato de muestreo
+            datos.outputParams.sampleFormat = paFloat32; // Se establece el formato de muestreo
             // Preparación de la reproduccion
-            fseek(audioData.file, 34, SEEK_SET);
+            fseek(datos.audioData.file, 34, SEEK_SET);
             // Abrir el flujo de salida de audio
-            err = Pa_OpenStream(&stream, NULL, &outputParams, audioData.sampleRate,
-                                FRAMES_PER_BUFFER, paNoFlag, audioFloat32Callback, &audioData);
+            datos.err = Pa_OpenStream(&(datos.stream), NULL, &(datos.outputParams), datos.audioData.sampleRate,
+                                FRAMES_PER_BUFFER, paNoFlag, audioFloat32Callback, &(datos.audioData));
         }
-        else if (bitsPerSample == 16)
+        else if (datos.bitsPerSample == 16)
         {
-            outputParams.sampleFormat = paInt16; // Se establece el formato de muestreo
+            datos.outputParams.sampleFormat = paInt16; // Se establece el formato de muestreo
             // Preparación de la reproduccion
-            fseek(audioData.file, 44, SEEK_SET);
+            fseek(datos.audioData.file, 44, SEEK_SET);
             // Abrir el flujo de salida de audio
-            err = Pa_OpenStream(&stream, NULL, &outputParams, audioData.sampleRate,
-                                FRAMES_PER_BUFFER, paNoFlag, audioInt16Callback, &audioData);
+            datos.err = Pa_OpenStream(&(datos.stream), NULL, &(datos.outputParams), datos.audioData.sampleRate,
+                                FRAMES_PER_BUFFER, paNoFlag, audioInt16Callback, &(datos.audioData));
         }
         else
         {
             printf("El archivo WAV no contiene datos de punto flotante de 32 bits ni enteros de 16 bits.\n");
         }
 
-        if (err != paNoError)
+        if (datos.err != paNoError)
         {
-            printf("Error al abrir el flujo de audio: %s\n", Pa_GetErrorText(err));
-            fclose(audioData.file);
+            printf("Error al abrir el flujo de audio: %s\n", Pa_GetErrorText(datos.err));
+            fclose(datos.audioData.file);
             Pa_Terminate();
             return 1;
         }
 
         // Iniciar la reproducción
-        err = Pa_StartStream(stream);
-        if (err != paNoError)
+        datos.err = Pa_StartStream(datos.stream);
+        if (datos.err != paNoError)
         {
-            printf("Error al iniciar la reproducción: %s\n", Pa_GetErrorText(err));
-            fclose(audioData.file);
-            Pa_CloseStream(stream);
+            printf("Error al iniciar la reproducción: %s\n", Pa_GetErrorText(datos.err));
+            fclose(datos.audioData.file);
+            Pa_CloseStream(datos.stream);
             Pa_Terminate();
             return 1;
         }
 
         // Inicio el contador de segundos en 0
-        audioData.currentTime = 0;
+        datos.audioData.currentTime = 0;
 
         // Crear el hilo contador de segundos reproducidos
-        if (pthread_create(&contador, NULL, contarSegundos, (void *)&audioData) != 0)
+        if (pthread_create(&contador, NULL, contarSegundos, (void *)&(datos.audioData)) != 0)
         {
             fprintf(stderr, "Error al crear el hilo\n");
             return 1;
         }
 
         // Funcion que controla la pausa, el stop, la cancion siguiente y la anterior
-        stopPlayNextBack(&audioData, stream);
+        stopPlayNextBack(&(datos.audioData), datos.stream);
 
         // Detener la reproducción
-        err = Pa_StopStream(stream);
-        if (err != paNoError)
+        datos.err = Pa_StopStream(datos.stream);
+        if (datos.err != paNoError)
         {
             // printf("Error al detener la reproducción: %s\n", Pa_GetErrorText(err));
         }
 
         // Cerrar el flujo de audio
-        err = Pa_CloseStream(stream);
-        if (err != paNoError)
+        datos.err = Pa_CloseStream(datos.stream);
+        if (datos.err != paNoError)
         {
-            printf("Error al cerrar el flujo de audio: %s\n", Pa_GetErrorText(err));
+            printf("Error al cerrar el flujo de audio: %s\n", Pa_GetErrorText(datos.err));
         }
 
         // Terminar PortAudio
         Pa_Terminate();
 
         // Cerrar el archivo de audio
-        fclose(audioData.file);
+        fclose(datos.audioData.file);
         position(5, 10);
         printf("Reproducción detenida.\n");
         pthread_join(contador, NULL);
         showCursor();
         restoreInputBuffer();
     }
-    freeFileNames(fileNames, numFiles);
+    freeFileNames(datos.fileNames, datos.numFiles);
 
     return 0;
 }

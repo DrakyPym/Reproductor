@@ -46,7 +46,7 @@ void stopPlayNextBack(AudioData *data, PaStream *stream)
     }
 }
 
-FILE *selectf(char **fileNames, int numFiles, const char *directorio)
+FILE *printSongs(char **fileNames, int numFiles, const char *directorio)
 {
     int quit = 0;
     int select = 0; // Indica que numero de cancion se seleccionara

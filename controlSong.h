@@ -26,5 +26,5 @@ typedef struct
 } AudioData;
 
 void stopPlayNextBack(AudioData *data, PaStream *stream);
-FILE* selectf(char **fileNames, int numFiles, const char *directorio);
+FILE* printSongs(char **fileNames, int numFiles, const char *directorio);
 #endif

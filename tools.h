@@ -15,7 +15,7 @@
 
 char getkey();
 void position(int x, int y);
-char **scanFolder(const char *directorio, int *numFiles, int maxFiles, int length);
+char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFiles, int length);
 void freeFileNames(char **fileNames, int numFiles);
 
 #endif

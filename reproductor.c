@@ -95,14 +95,14 @@ int main()
     const PaDeviceInfo *deviceInfo; // Estructura para pasar la latencia
     PaStreamParameters outputParams;
     Song songs[MAX_FILES];
-    pthread_t hilo0;
+    pthread_t contador;
     int bitsPerSample;
 
     const char *directorio = "audios/"; // Ruta del directorio a explorar
     int numFiles;                       // Guardara el numero de archivos wav leidos por la funcion scanFolder
     char **fileNames;
 
-    fileNames = scanFolder(directorio, &numFiles, MAX_FILES, LENGTH_FILES); // Retorna una matriz con los nombres de los archivos wav
+    fileNames = loadSongsFromDirectoty(directorio, &numFiles, MAX_FILES, LENGTH_FILES); // Retorna una matriz con los nombres de los archivos wav
 
     if (fileNames == NULL)
     {
@@ -130,7 +130,7 @@ int main()
         }
 
         // Selecciona la cancion y se reproduce
-        audioData.file = selectf(fileNames, numFiles, directorio);
+        audioData.file = printSongs(fileNames, numFiles, directorio);
 
         // Leer la cabecera del archivo WAV
         char header[44];
@@ -202,7 +202,7 @@ int main()
         audioData.currentTime = 0;
 
         // Crear el hilo contador de segundos reproducidos
-        if (pthread_create(&hilo0, NULL, contarSegundos, (void *)&audioData) != 0)
+        if (pthread_create(&contador, NULL, contarSegundos, (void *)&audioData) != 0)
         {
             fprintf(stderr, "Error al crear el hilo\n");
             return 1;
@@ -232,7 +232,7 @@ int main()
         fclose(audioData.file);
         position(5, 10);
         printf("Reproducción detenida.\n");
-        pthread_join(hilo0, NULL);
+        pthread_join(contador, NULL);
         showCursor();
         restoreInputBuffer();
     }

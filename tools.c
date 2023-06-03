@@ -69,7 +69,7 @@ char getkey()
     return key;
 }
 
-char **scanFolder(const char *directorio, int *numFiles, int maxFiles, int length)
+char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFiles, int length)
 {
     DIR *dir;
     struct dirent *entry;

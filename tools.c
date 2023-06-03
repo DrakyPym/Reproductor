@@ -1,8 +1,4 @@
 #include "tools.h"
-#include <stdio.h>
-#include <termios.h>
-#include <unistd.h>
-#include <fcntl.h>
 
 void position(int x, int y)
 {
@@ -69,7 +65,7 @@ char getkey()
     return key;
 }
 
-char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFiles, int length)
+char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFiles, int length, bool *error)
 {
     DIR *dir;
     struct dirent *entry;
@@ -78,7 +74,7 @@ char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFile
     dir = opendir(directorio); // Abrir el directorio
     if (dir == NULL)
     {
-        perror("Error al abrir el directorio"); // Mostrar error si no se puede abrir
+        perror("\nError al abrir el directorio"); // Mostrar error si no se puede abrir
         return NULL;
     }
 

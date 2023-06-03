@@ -10,12 +10,13 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <stdbool.h>
 
 #define MAX_PATH 4096 // Valor máximo para la ruta
 
 char getkey();
 void position(int x, int y);
-char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFiles, int length);
+char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFiles, int length, bool *error);
 void freeFileNames(char **fileNames, int numFiles);
 
 #endif

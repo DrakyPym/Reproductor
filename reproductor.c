@@ -23,6 +23,7 @@ typedef struct
     char album[15];
     char genre[15];
     char fileName[LENGTH_FILES];
+    const char *directorio; 
 } Song;
 
 // Funcion del hilo para contar los segundos
@@ -40,6 +41,13 @@ void *contarSegundos(void *arg)
             datos->currentTime += 0.01; // Incrementar los segundos
         }
     }
+    pthread_exit(NULL);
+}
+
+// Funcion del hilo para contar los segundos
+void *player(void *arg)
+{
+    
     pthread_exit(NULL);
 }
 
@@ -97,16 +105,15 @@ int main()
     Song songs[MAX_FILES];
     pthread_t contador;
     int bitsPerSample;
-
-    const char *directorio = "audios/"; // Ruta del directorio a explorar
+    songs->directorio = "audios/"; // Ruta del directorio a explorar
+    
     int numFiles;                       // Guardara el numero de archivos wav leidos por la funcion scanFolder
     char **fileNames;
 
-    fileNames = loadSongsFromDirectoty(directorio, &numFiles, MAX_FILES, LENGTH_FILES); // Retorna una matriz con los nombres de los archivos wav
+    fileNames = loadSongsFromDirectoty(songs->directorio, &numFiles, MAX_FILES, LENGTH_FILES); // Retorna una matriz con los nombres de los archivos wav
 
     if (fileNames == NULL)
     {
-        printf("No se pudo escanear el directorio.\n");
         return 1;
     }
     if (numFiles == 0)
@@ -130,7 +137,7 @@ int main()
         }
 
         // Selecciona la cancion y se reproduce
-        audioData.file = printSongs(fileNames, numFiles, directorio);
+        audioData.file = printSongs(fileNames, numFiles, songs->directorio);
 
         // Leer la cabecera del archivo WAV
         char header[44];

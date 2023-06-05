@@ -286,9 +286,10 @@ void *player(void *arg)
             pthread_exit(NULL);
         }
 
+        int select = 0;
         // Selecciona la cancion, abre el archivo y regresa el archivo a reproducir
-        dataThread->audioData.file = printSongs(dataThread->fileNames, dataThread->numFiles,
-                                                dataThread->songs->directorio);
+        printSongs(dataThread->fileNames, dataThread->numFiles,
+                dataThread->songs->directorio, &select, &(dataThread->audioData.file), &(dataThread->audioData));
 
         // Configura los parametros para la reproduccion de audio y abre el flujo de audio
         configureAudio(dataThread); // Utiliza internamente dataThread->audioData.file para saber que parametros configurar

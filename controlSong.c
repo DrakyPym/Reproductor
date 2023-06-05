@@ -46,10 +46,9 @@ void stopPlayNextBackTime(AudioData *data, PaStream *stream)
     }
 }
 
-FILE *printSongs(char **fileNames, int numFiles, const char *directorio)
+void printSongs(char **fileNames, int numFiles, const char *directorio, int *select, FILE **file1, AudioData *data)
 {
     int quit = 0;
-    int select = 0; // Indica que numero de cancion se seleccionara
     int i;
     char fileOpen[100]; // Va a guardar la ruta completa del archivo de audio a reproducir
     FILE *file;
@@ -63,7 +62,7 @@ FILE *printSongs(char **fileNames, int numFiles, const char *directorio)
     }
     position(X_SELECT, Y_SELECT + 1);
     printf(RED_COLOR);
-    printf("1. %s", fileNames[select]);
+    printf("1. %s", fileNames[*select]);
     while (!quit)
     {
         fflush(stdin);
@@ -76,57 +75,58 @@ FILE *printSongs(char **fileNames, int numFiles, const char *directorio)
             switch (key)
             {
             case 'U': // Flecha arriba
-                if (select == 0)
+                if (*select == 0)
                 {
                     fflush(stdin);
                     position(X_SELECT, Y_SELECT + 1);
                     printf(RESET_COLOR);
-                    printf("%i. %s", select + 1, fileNames[select]);
-                    select = numFiles - 1;
-                    position(X_SELECT, Y_SELECT + select + 1);
+                    printf("%i. %s", *select + 1, fileNames[*select]);
+                    (*select) = numFiles - 1;
+                    position(X_SELECT, Y_SELECT + *select + 1);
                     printf(RED_COLOR);
-                    printf("%i. %s", select + 1, fileNames[select]);
+                    printf("%i. %s", *select + 1, fileNames[*select]);
                 }
                 else
                 {
                     fflush(stdin);
-                    position(X_SELECT, Y_SELECT + select + 1);
+                    position(X_SELECT, Y_SELECT + *select + 1);
                     printf(RESET_COLOR);
-                    printf("%i. %s", select + 1, fileNames[select]);
-                    select--;
-                    position(X_SELECT, Y_SELECT + select + 1);
+                    printf("%i. %s", *select + 1, fileNames[*select]);
+                    (*select)--;
+                    position(X_SELECT, Y_SELECT + *select + 1);
                     printf(RED_COLOR);
-                    printf("%i. %s", select + 1, fileNames[select]);
+                    printf("%i. %s", *select + 1, fileNames[*select]);
                 }
                 break;
             case 'D': // Flecha abajo
-                if (select == numFiles - 1)
+                if (*select == numFiles - 1)
                 {
                     fflush(stdin);
-                    position(X_SELECT, Y_SELECT + select + 1);
+                    position(X_SELECT, Y_SELECT + *select + 1);
                     printf(RESET_COLOR);
-                    printf("%i. %s", select + 1, fileNames[select]);
-                    select = 0;
-                    position(X_SELECT, Y_SELECT + select + 1);
+                    printf("%i. %s", *select + 1, fileNames[*select]);
+                    (*select) = 0;
+                    position(X_SELECT, Y_SELECT + *select + 1);
                     printf(RED_COLOR);
-                    printf("%i. %s", select + 1, fileNames[select]);
+                    printf("%i. %s", *select + 1, fileNames[*select]);
                 }
                 else
                 {
                     fflush(stdin);
-                    position(X_SELECT, Y_SELECT + select + 1);
+                    position(X_SELECT, Y_SELECT + *select + 1);
                     printf(RESET_COLOR);
-                    printf("%i. %s", select + 1, fileNames[select]);
-                    select++;
-                    position(X_SELECT, Y_SELECT + select + 1);
+                    printf("%i. %s", *select + 1, fileNames[*select]);
+                    (*select)++;
+                    position(X_SELECT, Y_SELECT + *select + 1);
                     printf(RED_COLOR);
-                    printf("%i. %s", select + 1, fileNames[select]);
+                    printf("%i. %s", *select + 1, fileNames[*select]);
                 }
                 break;
             case 'E': // Enter
                 printf(RESET_COLOR);
                 fflush(stdin);
                 system("clear");
+                data->isEnd = 0;
                 quit = 1;
                 break;
             }
@@ -134,14 +134,15 @@ FILE *printSongs(char **fileNames, int numFiles, const char *directorio)
     }
 
     strcpy(fileOpen, directorio);
-    strcat(fileOpen, fileNames[select]);
+    strcat(fileOpen, fileNames[*select]);
 
     file = fopen(fileOpen, "rb");
     if (!file)
     {
+        //Terminar portAudio
         // printf("No se pudo abrir el archivo de audio.\n");
         Pa_Terminate();
     }
 
-    return file;
+    (*file1) = file;
 }

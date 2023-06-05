@@ -60,8 +60,94 @@ void *contarSegundos(void *arg);
 // Funcion del hilo para reproducir el sonido
 void *player(void *arg);
 
-//Funcion para establecer los parametros necesarios para la reproduccion, abrir el flujo de audio y cerrarlo 
+//Funcion para establecer los parametros necesarios para la reproduccion y abrir el flujo de audio 
+void configureAudio(DataThreadPlayer *dataThread){
+        // Leer la cabecera del archivo WAV
+        char header[44];
+        fread(header, sizeof(char), 44, dataThread->audioData.file);
 
+        // Obtener el numero de canales
+        fseek(dataThread->audioData.file, 22, SEEK_SET);
+        fread(&(dataThread->audioData).numChannels, sizeof(short), 1, dataThread->audioData.file);
+
+        // Obtener la velocidad de muestreo del archivo de audio
+        fseek(dataThread->audioData.file, 24, SEEK_SET);
+        fread(&(dataThread->audioData.sampleRate), sizeof(int), 1, dataThread->audioData.file);
+
+        // Obtener información del dispositivo de salida
+        dataThread->outputParams.device = Pa_GetDefaultOutputDevice(); // Obtenemos el identificador del dispositivo de salida por defecto
+        dataThread->deviceInfo = Pa_GetDeviceInfo(dataThread->outputParams.device);
+        dataThread->outputParams.channelCount = dataThread->audioData.numChannels;                   // Establecemos el numero de canales
+        dataThread->outputParams.suggestedLatency = dataThread->deviceInfo->defaultLowOutputLatency; // Se establece la latencia
+        dataThread->outputParams.hostApiSpecificStreamInfo = NULL;
+
+        // Verificar el tamaño de muestra
+        dataThread->bitsPerSample = header[34] + (header[35] << 8); // Obtener los bits por muestra desde la cabecera
+
+        // 1.Establece los parametros dependiendo de si es de punto flotante de 32 bits o entero de 16 bits
+        // 2.Abre el flujo de audio
+        if (dataThread->bitsPerSample == 32)
+        {
+            dataThread->outputParams.sampleFormat = paFloat32; // Se establece el formato de muestreo
+            // Preparación de la reproduccion
+            fseek(dataThread->audioData.file, 34, SEEK_SET);
+            // Abrir el flujo de salida de audio
+            dataThread->err = Pa_OpenStream(&(dataThread->stream), NULL, &(dataThread->outputParams), dataThread->audioData.sampleRate,
+                                            FRAMES_PER_BUFFER, paNoFlag, audioFloat32Callback, &(dataThread->audioData));
+        }
+        else if (dataThread->bitsPerSample == 16)
+        {
+            dataThread->outputParams.sampleFormat = paInt16; // Se establece el formato de muestreo
+            // Preparación de la reproduccion
+            fseek(dataThread->audioData.file, 44, SEEK_SET);
+            // Abrir el flujo de salida de audio
+            dataThread->err = Pa_OpenStream(&(dataThread->stream), NULL, &(dataThread->outputParams), dataThread->audioData.sampleRate,
+                                            FRAMES_PER_BUFFER, paNoFlag, audioInt16Callback, &(dataThread->audioData));
+        }
+        else
+        {
+            printf("El archivo WAV no contiene datos de punto flotante de 32 bits ni enteros de 16 bits.\n");
+        }
+
+        if (dataThread->err != paNoError)
+        {
+            printf("Error al abrir el flujo de audio: %s\n", Pa_GetErrorText(dataThread->err));
+            fclose(dataThread->audioData.file);
+            Pa_Terminate();
+            dataThread->error = true;
+            pthread_exit(NULL);
+        }
+
+        // Iniciar la reproducción
+        dataThread->err = Pa_StartStream(dataThread->stream);
+        if (dataThread->err != paNoError)
+        {
+            printf("Error al iniciar la reproducción: %s\n", Pa_GetErrorText(dataThread->err));
+            fclose(dataThread->audioData.file);
+            Pa_CloseStream(dataThread->stream);
+            Pa_Terminate();
+            dataThread->error = true;
+            pthread_exit(NULL);
+        }
+}
+
+// Funcion para detener la reproduccion y cerrar el flujo de audio
+void stopAudio(DataThreadPlayer *dataThread){
+    // Detener la reproducción
+    dataThread->err = Pa_StopStream(dataThread->stream);
+    if (dataThread->err != paNoError)
+    {
+        dataThread->error = true;
+        pthread_exit(NULL);
+    }
+
+    // Cerrar el flujo de audio
+    dataThread->err = Pa_CloseStream(dataThread->stream);
+    if (dataThread->err != paNoError)
+    {
+        printf("Error al cerrar el flujo de audio: %s\n", Pa_GetErrorText(dataThread->err));
+    }
+}
 
 int main()
 {
@@ -170,7 +256,7 @@ void *player(void *arg)
 {
     DataThreadPlayer *dataThread = (DataThreadPlayer *)arg; // Casteamos y recuperamos la informacion pasada al hilo
 
-    // Retorna una matriz con los nombres de los archivos wav
+    // Retorna una matriz con los nombres de los archivos wav y establece el numero de archivos en numFiles
     dataThread->fileNames = loadSongsFromDirectoty(dataThread->songs->directorio,
                                                    &(dataThread->numFiles), MAX_FILES,
                                                    LENGTH_FILES, &(dataThread->error));
@@ -200,77 +286,12 @@ void *player(void *arg)
             pthread_exit(NULL);
         }
 
-        // Selecciona la cancion y se reproduce
+        // Selecciona la cancion, abre el archivo y regresa el archivo a reproducir
         dataThread->audioData.file = printSongs(dataThread->fileNames, dataThread->numFiles,
                                                 dataThread->songs->directorio);
 
-        // Leer la cabecera del archivo WAV
-        char header[44];
-        fread(header, sizeof(char), 44, dataThread->audioData.file);
-
-        // Obtener el numero de canales
-        fseek(dataThread->audioData.file, 22, SEEK_SET);
-        fread(&(dataThread->audioData).numChannels, sizeof(short), 1, dataThread->audioData.file);
-
-        // Obtener la velocidad de muestreo del archivo de audio
-        fseek(dataThread->audioData.file, 24, SEEK_SET);
-        fread(&(dataThread->audioData.sampleRate), sizeof(int), 1, dataThread->audioData.file);
-
-        // Obtener información del dispositivo de salida
-        dataThread->outputParams.device = Pa_GetDefaultOutputDevice(); // Obtenemos el identificador del dispositivo de salida por defecto
-        dataThread->deviceInfo = Pa_GetDeviceInfo(dataThread->outputParams.device);
-        dataThread->outputParams.channelCount = dataThread->audioData.numChannels;                   // Establecemos el numero de canales
-        dataThread->outputParams.suggestedLatency = dataThread->deviceInfo->defaultLowOutputLatency; // Se establece la latencia
-        dataThread->outputParams.hostApiSpecificStreamInfo = NULL;
-
-        // Verificar el tamaño de muestra
-        dataThread->bitsPerSample = header[34] + (header[35] << 8); // Obtener los bits por muestra desde la cabecera
-
-        // 1.Establece los parametros dependiendo de si es de punto flotante de 32 bits o entero de 16 bits
-        // 2.Abre el flujo de audio
-        if (dataThread->bitsPerSample == 32)
-        {
-            dataThread->outputParams.sampleFormat = paFloat32; // Se establece el formato de muestreo
-            // Preparación de la reproduccion
-            fseek(dataThread->audioData.file, 34, SEEK_SET);
-            // Abrir el flujo de salida de audio
-            dataThread->err = Pa_OpenStream(&(dataThread->stream), NULL, &(dataThread->outputParams), dataThread->audioData.sampleRate,
-                                            FRAMES_PER_BUFFER, paNoFlag, audioFloat32Callback, &(dataThread->audioData));
-        }
-        else if (dataThread->bitsPerSample == 16)
-        {
-            dataThread->outputParams.sampleFormat = paInt16; // Se establece el formato de muestreo
-            // Preparación de la reproduccion
-            fseek(dataThread->audioData.file, 44, SEEK_SET);
-            // Abrir el flujo de salida de audio
-            dataThread->err = Pa_OpenStream(&(dataThread->stream), NULL, &(dataThread->outputParams), dataThread->audioData.sampleRate,
-                                            FRAMES_PER_BUFFER, paNoFlag, audioInt16Callback, &(dataThread->audioData));
-        }
-        else
-        {
-            printf("El archivo WAV no contiene datos de punto flotante de 32 bits ni enteros de 16 bits.\n");
-        }
-
-        if (dataThread->err != paNoError)
-        {
-            printf("Error al abrir el flujo de audio: %s\n", Pa_GetErrorText(dataThread->err));
-            fclose(dataThread->audioData.file);
-            Pa_Terminate();
-            dataThread->error = true;
-            pthread_exit(NULL);
-        }
-
-        // Iniciar la reproducción
-        dataThread->err = Pa_StartStream(dataThread->stream);
-        if (dataThread->err != paNoError)
-        {
-            printf("Error al iniciar la reproducción: %s\n", Pa_GetErrorText(dataThread->err));
-            fclose(dataThread->audioData.file);
-            Pa_CloseStream(dataThread->stream);
-            Pa_Terminate();
-            dataThread->error = true;
-            pthread_exit(NULL);
-        }
+        // Configura los parametros para la reproduccion de audio y abre el flujo de audio
+        configureAudio(dataThread); // Utiliza internamente dataThread->audioData.file para saber que parametros configurar
 
         // Inicio el contador de segundos en 0
         dataThread->audioData.currentTime = 0;
@@ -278,20 +299,8 @@ void *player(void *arg)
         // Funcion que controla la pausa, el stop, la cancion siguiente y la anterior, tambien imprime los segundos reproducidos
         stopPlayNextBackTime(&(dataThread->audioData), dataThread->stream);
 
-        // Detener la reproducción
-        dataThread->err = Pa_StopStream(dataThread->stream);
-        if (dataThread->err != paNoError)
-        {
-            dataThread->error = true;
-            pthread_exit(NULL);
-        }
-
-        // Cerrar el flujo de audio
-        dataThread->err = Pa_CloseStream(dataThread->stream);
-        if (dataThread->err != paNoError)
-        {
-            printf("Error al cerrar el flujo de audio: %s\n", Pa_GetErrorText(dataThread->err));
-        }
+        // Detiene la reproduccion y cierra el flujo de audio
+        stopAudio(dataThread);
 
         // Terminar PortAudio
         Pa_Terminate();

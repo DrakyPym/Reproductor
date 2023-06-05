@@ -70,6 +70,7 @@ char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFile
     DIR *dir;
     struct dirent *entry;
     char rutaCompleta[MAX_PATH];
+    int i;
 
     dir = opendir(directorio); // Abrir el directorio
     if (dir == NULL)
@@ -85,7 +86,7 @@ char **loadSongsFromDirectoty(const char *directorio, int *numFiles, int maxFile
         closedir(dir);
         return NULL;
     }
-    for (int i = 0; i < maxFiles; i++)
+    for (i = 0; i < maxFiles; i++)
     {
         fileNames[i] = malloc((length + 1) * sizeof(char));
     }

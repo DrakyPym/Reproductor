@@ -37,8 +37,7 @@ typedef struct
     int bitsPerSample;
     int numFiles; // Guardara el numero de archivos wav leidos por la funcion scanFolder
     char **fileNames;
-    const char *directorio;
-    bool error;
+    bool error; // Sera true si hay un error en el hilo
 } DataThreadPlayer;
 
 // Función de callback para el procesamiento de audio de punto flotante de 32 bits
@@ -58,8 +57,11 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
 // Funcion del hilo para contar los segundos
 void *contarSegundos(void *arg);
 
-// Funcion del hilo para contar los segundos
+// Funcion del hilo para reproducir el sonido
 void *player(void *arg);
+
+//Funcion para establecer los parametros necesarios para la reproduccion, abrir el flujo de audio y cerrarlo 
+
 
 int main()
 {
@@ -166,13 +168,13 @@ void *contarSegundos(void *arg)
 
 void *player(void *arg)
 {
-    DataThreadPlayer *dataThread = (DataThreadPlayer *)arg;
+    DataThreadPlayer *dataThread = (DataThreadPlayer *)arg; // Casteamos y recuperamos la informacion pasada al hilo
 
     // Retorna una matriz con los nombres de los archivos wav
     dataThread->fileNames = loadSongsFromDirectoty(dataThread->songs->directorio,
                                                    &(dataThread->numFiles), MAX_FILES,
                                                    LENGTH_FILES, &(dataThread->error));
-    if (dataThread->fileNames == NULL)
+    if (dataThread->fileNames == NULL) //No se pueden recuperar los nombre de los archivos wav
     {
         dataThread->error = true;
         pthread_exit(NULL);

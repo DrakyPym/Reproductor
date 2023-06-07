@@ -2,7 +2,7 @@
 #include <fcntl.h>
 #include <sndfile.h>
 #include <pthread.h>
-#include <semaphore.h>
+//#include <semaphore.h>
 #include "hideShow.h"
 #include "tools.h"
 #include "controlSong.h"
@@ -10,10 +10,6 @@
 #define FRAMES_PER_BUFFER 64 // Tamanio del buffer
 #define MAX_FILES 99         // Maxima cantidad de archivos wav que leera scanFolder
 #define LENGTH_FILES 50      // Tamanio maximo en el nombre de los archivos wav
-
-// Identificadores de semaforos
-sem_t semaphore1;
-sem_t semaphore2;
 
 // Estructura para almacenar los metadatos del archivo
 typedef struct
@@ -40,7 +36,7 @@ typedef struct
     Song songs[MAX_FILES];
     int bitsPerSample;
     int numFiles; // Guardara el numero de archivos wav leidos por la funcion scanFolder
-    char **fileNames;
+    char **fileNames; 
     bool error; // Sera true si hay un error en el hilo
 } DataThread;
 
@@ -59,7 +55,7 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
                        void *userData);
 
 // Funcion del hilo para contar los segundos
-void *contarSegundos(void *arg);
+void *countSeconds(void *arg);
 
 // Funcion del hilo para reproducir el sonido
 void *player(void *arg);
@@ -85,7 +81,7 @@ int main()
     }
 
     // Crear el hilo contador de segundos reproducidos
-    if (pthread_create(&tContador, NULL, contarSegundos, (void *)&(dataThread.audioData)) != 0)
+    if (pthread_create(&tContador, NULL, countSeconds, (void *)&(dataThread.audioData)) != 0)
     {
         showCursor();
         restoreInputBuffer();
@@ -157,7 +153,7 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
     return paContinue;
 }
 
-void *contarSegundos(void *arg)
+void *countSeconds(void *arg)
 {
     AudioData *datos = (AudioData *)arg;
 
@@ -177,8 +173,6 @@ void *player(void *arg)
 {
     pthread_t tSelector;
     DataThread *dataThread = (DataThread *)arg; // Casteamos y recuperamos la informacion pasada al hilo
-    sem_init(&semaphore1, 0, 0);
-    sem_init(&semaphore2, 0, 0);
 
     // Retorna una matriz con los nombres de los archivos wav y establece el numero de archivos en numFiles
     dataThread->fileNames = loadSongsFromDirectoty(dataThread->songs->directorio,
@@ -215,9 +209,6 @@ void *player(void *arg)
         
         // Esperar a que el hilo tSelector finalice
         pthread_join(tSelector, NULL);
-        //sem_wait(&semaphore1);
-        // Detiene la reproduccion y cierra el flujo de audio
-        //stopAudio(dataThread);
 
         // Terminar PortAudio
         Pa_Terminate();
@@ -225,10 +216,6 @@ void *player(void *arg)
         fclose(dataThread->audioData.file);
         position(5, 10);
         printf("Reproducción detenida.\n");
-
-        
-        sem_destroy(&semaphore1);
-        sem_destroy(&semaphore2);
     }
 }
 

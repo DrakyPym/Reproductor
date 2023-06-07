@@ -180,7 +180,7 @@ void *player(void *arg)
     dataThread->fileNames = loadSongsFromDirectoty(dataThread->songs->directorio,
                                                    &(dataThread->numFiles), MAX_FILES,
                                                    LENGTH_FILES, &(dataThread->error));
-    if (dataThread->fileNames == NULL) // No se pueden recuperar los nombre de los archivos wav
+    if (dataThread->fileNames == NULL) // No se pueden recuperar los nombres de los archivos wav
     {
         dataThread->error = true;
         pthread_exit(NULL);

@@ -134,13 +134,13 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
                 if (data->isPaused)
                 {
                     Pa_StopStream(stream);
-                    position(5, 11);
+                    position(X_SELECT - 10, Y_SELECT + 7);
                     printf("Audio en pausa. \n");
                 }
                 else
                 {
                     Pa_StartStream(stream);
-                    position(5, 11);
+                    position(X_SELECT - 10, Y_SELECT + 7);
                     printf("Audio reanudado.\n");
                 }
                 break;

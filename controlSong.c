@@ -105,6 +105,10 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
                 break;
             case 'E': // Enter
                 quit = true;
+                if(data->isPaused){
+                    Pa_StartStream(stream);
+                }
+                data->isPaused = false;
                 printf(RESET_COLOR);
                 fflush(stdin);
                 system("clear");
@@ -119,7 +123,6 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
                 if (!file)
                 {
                     // Terminar portAudio
-                    //  printf("No se pudo abrir el archivo de audio.\n");
                     Pa_Terminate();
                 }
                 data->isPlaying = true;

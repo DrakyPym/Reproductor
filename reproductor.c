@@ -76,6 +76,8 @@ int main()
     // Crear el hilo player
     if (pthread_create(&tPlayer, NULL, player, (void *)&dataThread) != 0)
     {
+        showCursor();
+        restoreInputBuffer();
         printf("\nError al crear el hilo player");
         return 1;
     }
@@ -216,6 +218,7 @@ void *player(void *arg)
         if (dataThread->audioData.file != NULL){ // Si se llego a seleccionar un audio se cerrara
             fclose(dataThread->audioData.file);
         }
+
         position(5, 11);
         printf("                ");
         position(5, 11);

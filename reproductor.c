@@ -68,6 +68,193 @@ void *player(void *arg);
 void *selector(void *arg);
 
 // Funcion para establecer los parametros necesarios para la reproduccion y abrir el flujo de audio
+void configureAudio(DataThread *dataThread);
+
+int main()
+{
+    pthread_t tContador, tPlayer;
+    DataThread dataThread;
+    dataThread.songs->directorio = "audios/"; // Ruta del directorio a explorar
+    dataThread.error = false;
+
+    // Crear el hilo player
+    if (pthread_create(&tPlayer, NULL, player, (void *)&dataThread) != 0)
+    {
+        printf("\nError al crear el hilo player");
+        return 1;
+    }
+
+    // Crear el hilo contador de segundos reproducidos
+    if (pthread_create(&tContador, NULL, contarSegundos, (void *)&(dataThread.audioData)) != 0)
+    {
+        showCursor();
+        restoreInputBuffer();
+        printf("\nError al crear el hilo contador");
+        return 1;
+    }
+
+    // Esperar a que el hilo tPlayer finalice
+    pthread_join(tPlayer, NULL);
+    if (dataThread.error == true)
+    {
+        showCursor();
+        restoreInputBuffer();
+        printf("\nError en el hilo tPlayer\n");
+        exit(1);
+    }
+    // Esperar a que el hilo tContador finalice
+    pthread_join(tContador, NULL);
+
+    showCursor();
+    restoreInputBuffer();
+    freeFileNames(dataThread.fileNames, dataThread.numFiles);
+
+    return 0;
+}
+
+int audioFloat32Callback(const void *inputBuffer, void *outputBuffer,
+                         unsigned long framesPerBuffer,
+                         const PaStreamCallbackTimeInfo *timeInfo,
+                         PaStreamCallbackFlags statusFlags,
+                         void *userData)
+{
+    AudioData *audioData = (AudioData *)userData;
+    float *out = (float *)outputBuffer;
+
+    // Leer los datos del archivo de audio y los copiamos al bufer de salida
+    size_t bytesRead = fread(out, sizeof(float), framesPerBuffer * audioData->numChannels,
+                             audioData->file);
+
+    if (bytesRead < framesPerBuffer * audioData->numChannels)
+    {
+        // Si se llega al final del archivo, se detiene la reproducción
+        audioData->isPlaying = false;
+        return paComplete;
+    }
+    return paContinue;
+}
+
+// Función de callback para el procesamiento de audio entero de 16 bits
+int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
+                       unsigned long framesPerBuffer,
+                       const PaStreamCallbackTimeInfo *timeInfo,
+                       PaStreamCallbackFlags statusFlags,
+                       void *userData)
+{
+    AudioData *audioData = (AudioData *)userData;
+    short *out = (short *)outputBuffer;
+
+    // Leer los datos del archivo de audio
+    size_t bytesRead = fread(out, sizeof(short), framesPerBuffer * audioData->numChannels,
+                             audioData->file);
+
+    if (bytesRead < framesPerBuffer * audioData->numChannels)
+    {
+        // Si se llega al final del archivo, se detiene la reproduccion
+        audioData->isPlaying = false;
+        return paComplete;
+    }
+    return paContinue;
+}
+
+void *contarSegundos(void *arg)
+{
+    AudioData *datos = (AudioData *)arg;
+
+    while (1)
+    {
+        if (datos->isEnd)
+            break;
+        if (!datos->isPaused)
+        {
+            usleep(10000);
+            datos->currentTime += 0.01; // Incrementar los segundos
+        }
+    }
+}
+
+void *player(void *arg)
+{
+    pthread_t tSelector;
+    DataThread *dataThread = (DataThread *)arg; // Casteamos y recuperamos la informacion pasada al hilo
+    sem_init(&semaphore1, 0, 0);
+    sem_init(&semaphore2, 0, 0);
+
+    // Retorna una matriz con los nombres de los archivos wav y establece el numero de archivos en numFiles
+    dataThread->fileNames = loadSongsFromDirectoty(dataThread->songs->directorio,
+                                                   &(dataThread->numFiles), MAX_FILES,
+                                                   LENGTH_FILES, &(dataThread->error));
+    if (dataThread->fileNames == NULL) // No se pueden recuperar los nombre de los archivos wav
+    {
+        dataThread->error = true;
+        pthread_exit(NULL);
+    }
+    if (dataThread->numFiles == 0)
+        printf("\nNo hay archivos wav en el directorio\n");
+    else if (dataThread->numFiles > 100)
+        printf("Supera el maximo de 100 canciones permitidas");
+    {
+        // Copia los nombres de los archivos a la estructura Songs
+        for (int i = 0; i < dataThread->numFiles; i++)
+        {
+            strcpy(dataThread->songs[i].fileName, dataThread->fileNames[i]);
+        }
+
+        // Inicializar la biblioteca PortAudio
+        dataThread->err = Pa_Initialize();
+        system("clear");
+        if (dataThread->err != paNoError)
+        {
+            printf("Error al inicializar PortAudio: %s\n", Pa_GetErrorText(dataThread->err));
+            dataThread->error = true;
+            pthread_exit(NULL);
+        }
+
+        // Se crea el hilo que selecciona la cancion 
+        pthread_create(&tSelector, NULL, selector, (void *)dataThread);
+        
+        // Esperar a que el hilo tSelector finalice
+        pthread_join(tSelector, NULL);
+        //sem_wait(&semaphore1);
+        // Detiene la reproduccion y cierra el flujo de audio
+        //stopAudio(dataThread);
+
+        // Terminar PortAudio
+        Pa_Terminate();
+        // Cerrar el archivo de audio
+        fclose(dataThread->audioData.file);
+        position(5, 10);
+        printf("Reproducción detenida.\n");
+
+        
+        sem_destroy(&semaphore1);
+        sem_destroy(&semaphore2);
+    }
+}
+
+void *selector(void *arg)
+{
+    DataThread *dataThread = (DataThread *)arg; // Casteamos y recuperamos la informacion pasada al hilo
+                                                // Inicio el contador de segundos en 0
+    int select = 0;
+    dataThread->audioData.isPlaying = false;
+    while (true)
+    {
+        dataThread->audioData.currentTime = 0;
+        // Selecciona la cancion, abre el archivo y regresa el archivo a reproducir
+        printSongs(dataThread->fileNames, dataThread->numFiles,
+                   dataThread->songs->directorio, &select,
+                   &(dataThread->audioData.file), &(dataThread->audioData), dataThread->stream);
+        //sem_wait(&semaphore1);
+        // Configura los parametros para la reproduccion de audio y abre el flujo de audio
+        if (dataThread->audioData.isEnd == true)
+            break;
+        configureAudio(dataThread); // Utiliza internamente dataThread->audioData.file para saber que parametros configurar
+    }
+    //sem_post(&semaphore1);
+}
+
+// Funcion para establecer los parametros necesarios para la reproduccion y abrir el flujo de audio
 void configureAudio(DataThread *dataThread)
 {
     // Leer la cabecera del archivo WAV
@@ -137,203 +324,4 @@ void configureAudio(DataThread *dataThread)
         dataThread->error = true;
         pthread_exit(NULL);
     }
-}
-
-// Funcion para detener la reproduccion y cerrar el flujo de audio
-/*void stopAudio(DataThread *dataThread)
-{
-    // Detener la reproducción
-    dataThread->err = Pa_StopStream(dataThread->stream);
-    if (dataThread->err != paNoError)
-    {
-        dataThread->error = true;
-        pthread_exit(NULL);
-    }
-
-    // Cerrar el flujo de audio
-    dataThread->err = Pa_CloseStream(dataThread->stream);
-    if (dataThread->err != paNoError)
-    {
-        printf("Error al cerrar el flujo de audio: %s\n", Pa_GetErrorText(dataThread->err));
-    }
-}*/
-
-int main()
-{
-    pthread_t tContador, tPlayer;
-    DataThread dataThread;
-    dataThread.songs->directorio = "audios/"; // Ruta del directorio a explorar
-    dataThread.error = false;
-
-    // Crear el hilo player
-    if (pthread_create(&tPlayer, NULL, player, (void *)&dataThread) != 0)
-    {
-        printf("\nError al crear el hilo player");
-        return 1;
-    }
-
-    // Crear el hilo contador de segundos reproducidos
-    if (pthread_create(&tContador, NULL, contarSegundos, (void *)&(dataThread.audioData)) != 0)
-    {
-        showCursor();
-        restoreInputBuffer();
-        printf("\nError al crear el hilo contador");
-        return 1;
-    }
-
-    // Esperar a que el hilo tPlayer finalice
-    pthread_join(tPlayer, NULL);
-    if (dataThread.error == true)
-    {
-        showCursor();
-        restoreInputBuffer();
-        printf("\nError en el hilo tPlayer\n");
-        exit(1);
-    }
-    // Esperar a que el hilo tContador finalice
-    pthread_join(tContador, NULL);
-
-    showCursor();
-    restoreInputBuffer();
-    freeFileNames(dataThread.fileNames, dataThread.numFiles);
-
-    return 0;
-}
-
-int audioFloat32Callback(const void *inputBuffer, void *outputBuffer,
-                         unsigned long framesPerBuffer,
-                         const PaStreamCallbackTimeInfo *timeInfo,
-                         PaStreamCallbackFlags statusFlags,
-                         void *userData)
-{
-    AudioData *audioData = (AudioData *)userData;
-    float *out = (float *)outputBuffer;
-
-    // Leer los datos del archivo de audio y los copiamos al bufer de salida
-    size_t bytesRead = fread(out, sizeof(float), framesPerBuffer * audioData->numChannels,
-                             audioData->file);
-
-    if (bytesRead < framesPerBuffer * audioData->numChannels)
-    {
-        // Si se llega al final del archivo, se detiene la reproducción
-        audioData->isEnd = true;
-        return paComplete;
-    }
-    return paContinue;
-}
-
-// Función de callback para el procesamiento de audio entero de 16 bits
-int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
-                       unsigned long framesPerBuffer,
-                       const PaStreamCallbackTimeInfo *timeInfo,
-                       PaStreamCallbackFlags statusFlags,
-                       void *userData)
-{
-    AudioData *audioData = (AudioData *)userData;
-    short *out = (short *)outputBuffer;
-
-    // Leer los datos del archivo de audio
-    size_t bytesRead = fread(out, sizeof(short), framesPerBuffer * audioData->numChannels,
-                             audioData->file);
-
-    if (bytesRead < framesPerBuffer * audioData->numChannels)
-    {
-        // Si se llega al final del archivo, se detiene la reproduccion
-        audioData->isEnd = true;
-        return paComplete;
-    }
-    return paContinue;
-}
-
-void *contarSegundos(void *arg)
-{
-    AudioData *datos = (AudioData *)arg;
-
-    while (1)
-    {
-        if (datos->isEnd)
-            break;
-        if (!datos->isPaused)
-        {
-            usleep(10000);
-            datos->currentTime += 0.01; // Incrementar los segundos
-        }
-    }
-}
-
-void *player(void *arg)
-{
-    pthread_t tSelector;
-    DataThread *dataThread = (DataThread *)arg; // Casteamos y recuperamos la informacion pasada al hilo
-    sem_init(&semaphore1, 0, 0);
-    sem_init(&semaphore2, 0, 0);
-
-    // Retorna una matriz con los nombres de los archivos wav y establece el numero de archivos en numFiles
-    dataThread->fileNames = loadSongsFromDirectoty(dataThread->songs->directorio,
-                                                   &(dataThread->numFiles), MAX_FILES,
-                                                   LENGTH_FILES, &(dataThread->error));
-    if (dataThread->fileNames == NULL) // No se pueden recuperar los nombre de los archivos wav
-    {
-        dataThread->error = true;
-        pthread_exit(NULL);
-    }
-    if (dataThread->numFiles == 0)
-        printf("\nNo hay archivos wav en el directorio\n");
-    else if (dataThread->numFiles > 100)
-        printf("Supera el maximo de 100 canciones permitidas");
-    {
-        // Copia los nombres de los archivos a la estructura Songs
-        for (int i = 0; i < dataThread->numFiles; i++)
-        {
-            strcpy(dataThread->songs[i].fileName, dataThread->fileNames[i]);
-        }
-
-        // Inicializar la biblioteca PortAudio
-        dataThread->err = Pa_Initialize();
-        system("clear");
-        if (dataThread->err != paNoError)
-        {
-            printf("Error al inicializar PortAudio: %s\n", Pa_GetErrorText(dataThread->err));
-            dataThread->error = true;
-            pthread_exit(NULL);
-        }
-
-        // Se crea el hilo que selecciona la cancion 
-        pthread_create(&tSelector, NULL, selector, (void *)dataThread);
-        sem_wait(&semaphore1);
-        // Detiene la reproduccion y cierra el flujo de audio
-        //stopAudio(dataThread);
-
-        // Terminar PortAudio
-        Pa_Terminate();
-        // Cerrar el archivo de audio
-        fclose(dataThread->audioData.file);
-        position(5, 10);
-        printf("Reproducción detenida.\n");
-
-        // Esperar a que el hilo tSelector finalice
-        pthread_join(tSelector, NULL);
-        sem_destroy(&semaphore1);
-        sem_destroy(&semaphore2);
-    }
-}
-
-void *selector(void *arg)
-{
-    DataThread *dataThread = (DataThread *)arg; // Casteamos y recuperamos la informacion pasada al hilo
-                                                // Inicio el contador de segundos en 0
-    int select = 0;
-    dataThread->audioData.isPlaying = false;
-    while (true)
-    {
-        dataThread->audioData.currentTime = 0;
-        // Selecciona la cancion, abre el archivo y regresa el archivo a reproducir
-        printSongs(dataThread->fileNames, dataThread->numFiles,
-                   dataThread->songs->directorio, &select,
-                   &(dataThread->audioData.file), &(dataThread->audioData), dataThread->stream);
-        //sem_wait(&semaphore1);
-        // Configura los parametros para la reproduccion de audio y abre el flujo de audio
-        configureAudio(dataThread); // Utiliza internamente dataThread->audioData.file para saber que parametros configurar
-    }
-    sem_post(&semaphore1);
 }

@@ -219,9 +219,9 @@ void *player(void *arg)
             fclose(dataThread->audioData.file);
         }
 
-        position(5, 11);
+        position(X_SELECT - 10, Y_SELECT + 7);
         printf("                ");
-        position(5, 11);
+        position(X_SELECT - 10, Y_SELECT + 7);
         printf("Reproducción detenida.\n");
     }
 }
@@ -236,6 +236,7 @@ void *selector(void *arg)
     dataThread->audioData.file = NULL; // Se inciliza el apuntador
     while (true)
     {
+
         // Se establece el tiempo de reproduccion en 0
         dataThread->audioData.currentTime = 0;
 

@@ -8,7 +8,7 @@
 #include "hideShow.h"
 
 #define X_SELECT 15 // Variable para modificar la posicion del menu
-#define Y_SELECT 7 //Variable para modificar la posicion del menu
+#define Y_SELECT 5 //Variable para modificar la posicion del menu
 
 // Definir colores de escape ANSI
 #define RESET_COLOR   "\x1B[0m"
@@ -20,10 +20,10 @@ typedef struct
     FILE *file;
     int sampleRate;    
     int numChannels;
-    long int format;
-    bool isPaused;
-    bool isEnd;
-    float currentTime;
+    long int format; //Guarda el formato
+    bool isPaused; //Indica si el audio ha sido pausado
+    bool isEnd; // Indica si el programa ha finalizado
+    float currentTime; //Guarda el tiempo que lleva reproducido
     bool isPlaying;
 } AudioData;
 void stopAudio(AudioData *data, PaStream *stream);

@@ -213,8 +213,12 @@ void *player(void *arg)
         // Terminar PortAudio
         Pa_Terminate();
         // Cerrar el archivo de audio
-        fclose(dataThread->audioData.file);
-        position(5, 10);
+        if (dataThread->audioData.file != NULL){ // Si se llego a seleccionar un audio se cerrara
+            fclose(dataThread->audioData.file);
+        }
+        position(5, 11);
+        printf("                ");
+        position(5, 11);
         printf("Reproducción detenida.\n");
     }
 }
@@ -222,23 +226,27 @@ void *player(void *arg)
 void *selector(void *arg)
 {
     DataThread *dataThread = (DataThread *)arg; // Casteamos y recuperamos la informacion pasada al hilo
-                                                // Inicio el contador de segundos en 0
+
+    // Inicialmente se seleccionara el audio 0                                            
     int select = 0;
     dataThread->audioData.isPlaying = false;
+    dataThread->audioData.file = NULL; // Se inciliza el apuntador
     while (true)
     {
+        // Se establece el tiempo de reproduccion en 0
         dataThread->audioData.currentTime = 0;
+
         // Selecciona la cancion, abre el archivo y regresa el archivo a reproducir
         printSongs(dataThread->fileNames, dataThread->numFiles,
                    dataThread->songs->directorio, &select,
                    &(dataThread->audioData.file), &(dataThread->audioData), dataThread->stream);
-        //sem_wait(&semaphore1);
-        // Configura los parametros para la reproduccion de audio y abre el flujo de audio
-        if (dataThread->audioData.isEnd == true)
+
+        if (dataThread->audioData.isEnd == true) // Si se manda una orden de finalizacion del programa, sale del bucle 
             break;
+
+        // Configura los parametros para la reproduccion de audio, abre el flujo de audio y comienza la reproduccion
         configureAudio(dataThread); // Utiliza internamente dataThread->audioData.file para saber que parametros configurar
     }
-    //sem_post(&semaphore1);
 }
 
 // Funcion para establecer los parametros necesarios para la reproduccion y abrir el flujo de audio

@@ -1,52 +1,5 @@
 #include "controlSong.h"
 
-/*void stopPlayNextBackTime(AudioData *data, PaStream *stream)
-{
-    int quit = 0;
-    position(5, 2);
-    printf("Reproduciendo audio. Presiona 'p' para pausar o 'q' para salir.\n");
-
-    while (!quit)
-    {
-        fflush(stdin);
-        if (data->isEnd)
-            break;
-        hideCursor();
-        position(5, 10);
-        printf("Tiempo: %i segundos", (int)data->currentTime);
-        usleep(10000);
-        hideInputBuffer();
-        char key = getkey();
-        if (key != '\0')
-        {
-            switch (key)
-            {
-            case 'p':
-                fflush(stdin);
-                data->isPaused = !data->isPaused;
-                if (data->isPaused)
-                {
-                    Pa_StopStream(stream);
-                    position(5, 11);
-                    printf("Audio en pausa.\n");
-                }
-                else
-                {
-                    Pa_StartStream(stream);
-                    position(5, 11);
-                    printf("Audio reanudado.\n");
-                }
-                break;
-            case 'q':
-                fflush(stdin);
-                quit = 1;
-                data->isEnd = true;
-                break;
-            }
-        }
-    }
-}*/
-
 // Funcion para detener la reproduccion y cerrar el flujo de audio
 void stopAudio(AudioData *data, PaStream *stream)
 {
@@ -81,9 +34,9 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
         position(X_SELECT, Y_SELECT + i + 1);
         printf("%i. %s", i + 1, fileNames[i]); // Se imprimen los nombres de las canciones
     }
-    position(X_SELECT, Y_SELECT + 1);
+    position(X_SELECT, Y_SELECT + *select + 1);
     printf(RED_COLOR);
-    printf("1. %s", fileNames[*select]);
+    printf("%i. %s", *select + 1, fileNames[*select]);
     while (!quit)
     {
         usleep(10000); // Aligera la carga del procesador
@@ -179,7 +132,7 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
                 {
                     Pa_StopStream(stream);
                     position(5, 11);
-                    printf("Audio en pausa.\n");
+                    printf("Audio en pausa. \n");
                 }
                 else
                 {

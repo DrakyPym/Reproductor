@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <portaudio.h>
 #include <string.h>
+#include <pthread.h>
 #include "tools.h"
 #include "hideShow.h"
 
@@ -17,14 +18,17 @@
 typedef struct
 {
     FILE *file;
-    int sampleRate;
+    int sampleRate;    
     int numChannels;
     long int format;
     bool isPaused;
     bool isEnd;
     float currentTime;
+    bool isPlaying;
 } AudioData;
+void stopAudio(AudioData *data, PaStream *stream);
 
-void stopPlayNextBackTime(AudioData *data, PaStream *stream);
-void printSongs(char **fileNames, int numFiles, const char *directorio, int *select, FILE **file1, AudioData *data);
+//void stopPlayNextBackTime(AudioData *data, PaStream *stream);
+void printSongs(char **fileNames, int numFiles, const char *directorio, int *select, FILE **file1, AudioData *data, PaStream *stream);
+
 #endif

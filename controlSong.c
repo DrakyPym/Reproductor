@@ -1,8 +1,9 @@
 #include "controlSong.h"
 
-void stopPlayNextBackTime(AudioData *data, PaStream *stream)
+/*void stopPlayNextBackTime(AudioData *data, PaStream *stream)
 {
     int quit = 0;
+    position(5, 2);
     printf("Reproduciendo audio. Presiona 'p' para pausar o 'q' para salir.\n");
 
     while (!quit)
@@ -44,15 +45,35 @@ void stopPlayNextBackTime(AudioData *data, PaStream *stream)
             }
         }
     }
+}*/
+
+// Funcion para detener la reproduccion y cerrar el flujo de audio
+void stopAudio(AudioData *data, PaStream *stream)
+{
+    PaError err;
+    // Detener la reproducción
+    err = Pa_StopStream(stream);
+    if (err != paNoError)
+    {
+        pthread_exit(NULL);
+    }
+
+    // Cerrar el flujo de audio
+    err = Pa_CloseStream(stream);
+    if (err != paNoError)
+    {
+        printf("Error al cerrar el flujo de audio: %s\n", Pa_GetErrorText(err));
+    }
 }
 
-void printSongs(char **fileNames, int numFiles, const char *directorio, int *select, FILE **file1, AudioData *data)
+void printSongs(char **fileNames, int numFiles, const char *directorio, int *select, FILE **file1, AudioData *data, PaStream *stream)
 {
-    int quit = 0;
+    bool quit = false;
     int i;
     char fileOpen[100]; // Va a guardar la ruta completa del archivo de audio a reproducir
     FILE *file;
-
+    hideCursor();
+    hideInputBuffer();
     position(X_SELECT, Y_SELECT);
     printf("Seleccione una cancion");
     for (i = 0; i < numFiles; i++)
@@ -65,8 +86,15 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
     printf("1. %s", fileNames[*select]);
     while (!quit)
     {
+        usleep(10000); // Aligera la carga del procesador
+        if (data->isPlaying)
+        {
+            position(5, 2);
+            printf("Reproduciendo audio. Presiona 'p' para pausar o 'q' para salir.\n");
+            position(5, 3);
+            printf("Tiempo: %i segundos", (int)data->currentTime);
+        }
         fflush(stdin);
-        usleep(10000);
         hideCursor();
         hideInputBuffer();
         char key = getkey();
@@ -123,26 +151,50 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
                 }
                 break;
             case 'E': // Enter
+                quit = true;
                 printf(RESET_COLOR);
                 fflush(stdin);
                 system("clear");
-                data->isEnd = 0;
-                quit = 1;
+                strcpy(fileOpen, directorio);
+                strcat(fileOpen, fileNames[*select]);
+                // Si ya existe un audio reproduciendo, cierra el flujo de audio
+                if (data->isPlaying == true){
+                    stopAudio(data, stream);
+                    data->isPlaying = false;
+                }
+                file = fopen(fileOpen, "rb");
+                if (!file)
+                {
+                    // Terminar portAudio
+                    //  printf("No se pudo abrir el archivo de audio.\n");
+                    Pa_Terminate();
+                }
+                data->isPlaying = true;
+                (*file1) = file;
+                break;
+            case 'p': // Letra p de pausa
+                fflush(stdin);
+                data->isPaused = !data->isPaused;
+                if (data->isPaused)
+                {
+                    Pa_StopStream(stream);
+                    position(5, 11);
+                    printf("Audio en pausa.\n");
+                }
+                else
+                {
+                    Pa_StartStream(stream);
+                    position(5, 11);
+                    printf("Audio reanudado.\n");
+                }
+                break;
+            case 'q': // Letra q de quitar
+                fflush(stdin);
+                quit = true;
+                data->isEnd = true;
                 break;
             }
         }
     }
-
-    strcpy(fileOpen, directorio);
-    strcat(fileOpen, fileNames[*select]);
-
-    file = fopen(fileOpen, "rb");
-    if (!file)
-    {
-        //Terminar portAudio
-        // printf("No se pudo abrir el archivo de audio.\n");
-        Pa_Terminate();
-    }
-
-    (*file1) = file;
 }
+

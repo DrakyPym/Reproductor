@@ -11,7 +11,8 @@
         "controlsong.h": "c",
         "tools.h": "c",
         "stdint.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "semaphore.h": "c"
     },
     "cmake.configureOnOpen": false,
     "cmake.sourceDirectory": "/home/draky/Escritorio/Reproductor/lib/portaudio"

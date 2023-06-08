@@ -325,4 +325,3 @@ void *selector(void *arg)
         configureAudio(dataThread); // Utiliza internamente dataThread->audioData.file para saber que parametros configurar
     }
 }
-

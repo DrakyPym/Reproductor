@@ -25,6 +25,7 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
     int i;
     char fileOpen[100]; // Va a guardar la ruta completa del archivo de audio a reproducir
     FILE *file;
+    float timeNoSelect = 0.0; //Se inicia los segundos sin seleccion en 0
     hideCursor();
     hideInputBuffer();
     position(X_SELECT, Y_SELECT);
@@ -37,13 +38,42 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
     position(X_SELECT, Y_SELECT + *select + 1);
     printf(RED_COLOR);
     printf("%i. %s", *select + 1, fileNames[*select]);
+
     while (!quit)
     {
         usleep(10000); // Aligera la carga del procesador
+        if (data->indicator == false && data->isPlaying == false){
+            timeNoSelect += 0.01;
+            
+            if((int)timeNoSelect == 1){
+                printf(RESET_COLOR);
+                if((*select) == numFiles - 1)
+                {
+                    (*select) = -1;
+                }
+
+                quit = true;
+                
+                strcpy(fileOpen, directorio);
+                (*select)++;
+                strcat(fileOpen, fileNames[*select]);
+                file = fopen(fileOpen, "rb");
+                if (!file)
+                {
+                    // Terminar portAudio
+                    Pa_Terminate();
+                }
+                data->isPlaying = true;
+                (*file1) = file;
+                
+            }
+        }
         if (data->isPlaying)
         {
             position(5, 2);
             printf("Reproduciendo audio. Presiona 'p' para pausar o 'q' para salir.\n");
+            position(5, 3);
+            printf("                     ");
             position(5, 3);
             printf("Tiempo: %i segundos", (int)data->currentTime);
         }
@@ -105,6 +135,7 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
                 break;
             case 'E': // Enter
                 quit = true;
+                data->indicator = true; // El indicador de seleccion se activa
                 if(data->isPaused){
                     Pa_StartStream(stream);
                 }

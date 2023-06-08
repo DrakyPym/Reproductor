@@ -25,6 +25,8 @@ typedef struct
     bool isEnd; // Indica si el programa ha finalizado
     float currentTime; //Guarda el tiempo que lleva reproducido
     bool isPlaying;
+    bool indicator; //Indica si se selecciono una cancion
+    int select; // Inicialmente el audio seleccionado
 } AudioData;
 void stopAudio(AudioData *data, PaStream *stream);
 

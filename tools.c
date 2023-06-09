@@ -142,3 +142,4 @@ void freeFileNames(char **fileNames, int numFiles)
     }
     free(fileNames);
 }
+

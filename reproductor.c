@@ -2,7 +2,7 @@
 #include <fcntl.h>
 #include <sndfile.h>
 #include <pthread.h>
-//#include <semaphore.h>
+// #include <semaphore.h>
 #include "hideShow.h"
 #include "tools.h"
 #include "controlSong.h"
@@ -36,7 +36,7 @@ typedef struct
     Song songs[MAX_FILES];
     int bitsPerSample;
     int numFiles; // Guardara el numero de archivos wav leidos por la funcion scanFolder
-    char **fileNames; 
+    char **fileNames;
     bool error; // Sera true si hay un error en el hilo
 } DataThread;
 
@@ -70,7 +70,7 @@ int main()
 {
     pthread_t tContador, tPlayer;
     DataThread dataThread;
-    dataThread.songs->directorio = "audios/"; // Ruta del directorio a explorar
+    dataThread.songs->directorio = "./"; // Ruta del directorio a explorar
     dataThread.error = false;
 
     // Crear el hilo player
@@ -126,7 +126,7 @@ int audioFloat32Callback(const void *inputBuffer, void *outputBuffer,
     if (bytesRead < framesPerBuffer * audioData->numChannels)
     {
         // Si se llega al final del archivo, se detiene la reproducción
-        audioData->indicator = false;
+        audioData->indicator = false; // Indicador de seleccion
         audioData->isPlaying = false;
         return paComplete;
     }
@@ -150,7 +150,7 @@ int audioInt16Callback(const void *inputBuffer, void *outputBuffer,
     if (bytesRead < framesPerBuffer * audioData->numChannels)
     {
         // Si se llega al final del archivo, se detiene la reproduccion
-        audioData->indicator = false;       
+        audioData->indicator = false;
         audioData->isPlaying = false;
         return paComplete;
     }
@@ -281,7 +281,7 @@ void *player(void *arg)
             pthread_exit(NULL);
         }
 
-        // Se crea el hilo que selecciona la cancion 
+        // Se crea el hilo que selecciona la cancion
         pthread_create(&tSelector, NULL, selector, (void *)dataThread);
         dataThread->audioData.indicator = false;
 
@@ -291,7 +291,8 @@ void *player(void *arg)
         // Terminar PortAudio
         Pa_Terminate();
         // Cerrar el archivo de audio
-        if (dataThread->audioData.file != NULL){ // Si se llego a seleccionar un audio se cerrara
+        if (dataThread->audioData.file != NULL)
+        { // Si se llego a seleccionar un audio se cerrara
             fclose(dataThread->audioData.file);
         }
 
@@ -304,10 +305,10 @@ void *player(void *arg)
 
 void *selector(void *arg)
 {
-    DataThread *dataThread = (DataThread *)arg; // Casteamos y recuperamos la informacion pasada al hilo                           
-    dataThread->audioData.select = 0; // Inicialmente se seleccionara el audio 0    
-    dataThread->audioData.indicator = true; //El audio no iniciara al abrir el programa y sin hacer una seleccion 
-    dataThread->audioData.file = NULL; // Se inciliza el apuntador
+    DataThread *dataThread = (DataThread *)arg; // Casteamos y recuperamos la informacion pasada al hilo
+    dataThread->audioData.select = 0;           // Inicialmente se seleccionara el audio 0
+    dataThread->audioData.indicator = true;     // El audio no iniciara al abrir el programa y sin hacer una seleccion
+    dataThread->audioData.file = NULL;          // Se inciliza el apuntador
     while (true)
     {
         // Se establece el tiempo de reproduccion en 0
@@ -318,7 +319,7 @@ void *selector(void *arg)
                    dataThread->songs->directorio, &(dataThread->audioData.select),
                    &(dataThread->audioData.file), &(dataThread->audioData), dataThread->stream);
 
-        if (dataThread->audioData.isEnd == true) // Si se manda una orden de finalizacion del programa, sale del bucle 
+        if (dataThread->audioData.isEnd == true) // Si se manda una orden de finalizacion del programa, sale del bucle
             break;
 
         // Configura los parametros para la reproduccion de audio, abre el flujo de audio y comienza la reproduccion

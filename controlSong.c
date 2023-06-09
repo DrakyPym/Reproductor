@@ -45,7 +45,7 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
         if (data->indicator == false && data->isPlaying == false){
             timeNoSelect += 0.01;
             
-            if((int)timeNoSelect == 1){
+            if((int)timeNoSelect == 1){ // Si el tiempo sin seleccion es de 1 segundo continua con la siguiente cancion
                 printf(RESET_COLOR);
                 if((*select) == numFiles - 1)
                 {

@@ -71,7 +71,7 @@ void printSongs(char **fileNames, int numFiles, const char *directorio, int *sel
         if (data->isPlaying)
         {
             position(5, 2);
-            printf("Reproduciendo audio. Presiona 'p' para pausar o 'q' para salir.\n");
+            printf("Reproduciendo %s. Presiona 'p' para pausar o 'q' para salir.\n", fileNames[*select]);
             position(5, 3);
             printf("                     ");
             position(5, 3);
